@@ -1,4 +1,3 @@
-```markdown
 # Arc Pinned Tabs to HTML Bookmarks Converter
 
 ## Overview
@@ -16,6 +15,12 @@ This addresses the lack of a pinned tabs export feature in Arc Browser.
 
 1. Clone the repository: `git clone https://github.com/iamfitsum/arc-export-windows.git`
 2. Navigate to the project folder: `cd arc-export-windows`
+
+or download using `curl`:
+
+```sh
+curl -o main.py https://raw.githubusercontent.com/iamfitsum/arc-export-windows/main/main.py
+```
 
 ## Usage
 
