@@ -59,4 +59,3 @@ And do not forget to give the project a star if you like it! :star:
 ## License
 
 This project is licensed under the MIT License.
-```
