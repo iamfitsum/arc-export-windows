@@ -48,7 +48,7 @@ python main.py
 
 ## Acknowledgments
 
-This project is based on the arc-export project by ivnvxd. Thank you for the original work!
+This project is based on the [arc-export](https://github.com/ivnvxd/arc-export) project by [ivnvxd](https://github.com/ivnvxd). Thank you for the original work!
 
 ## Contributions
 
