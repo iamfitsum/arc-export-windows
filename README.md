@@ -27,7 +27,7 @@ curl -o main.py https://raw.githubusercontent.com/iamfitsum/arc-export-windows/m
 ### Finding `StorableSidebar.json` in Windows
 
 1. Enable "Show hidden files" by clicking **View** on the top navigation bar of the File Explorer, then clicking on **Show** and checking the **Hidden items**.
-2. Navigate to `C:\Users\{User Name}\AppData\Local\Packages\TheBrowserCompany.Arc_ttt1ap7aakyb4\LocalCache\Local\Arc`.
+2. Navigate to `C:\Users\{UserName}\AppData\Local\Packages\TheBrowserCompany.Arc_ttt1ap7aakyb4\LocalCache\Local\Arc`.
 3. Copy the `StorableSidebar.json` file to the directory where you placed `main.py` (i.e., the cloned project folder or the folder where you downloaded `main.py`).
 
 Then, run the `main.py` script from the command line:
