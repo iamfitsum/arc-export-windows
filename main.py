@@ -1,55 +1,91 @@
 import datetime
 import json
+import re
 from pathlib import Path
 
 
+def fix_malformed_urls(json_content: str) -> str:
+    """
+    Fix malformed URL escaping in JSON content.
+    
+    Arc browser exports sometimes have incorrectly escaped file paths and URLs
+    that cause JSON parsing errors. This function corrects these issues.
+    """
+    # Fix malformed URL patterns
+    json_content = re.sub(r'file:\\\/\\\/\\\/', 'file:///', json_content)
+    json_content = re.sub(r'https:\\\/\\\/', 'https://', json_content)
+    json_content = re.sub(r'http:\\\/\\\/', 'http://', json_content)
+    
+    # Fix Windows file paths with unescaped backslashes
+    json_content = re.sub(r'C:\\', 'C:/', json_content)
+    json_content = re.sub(r'D:\\', 'D:/', json_content)
+    
+    return json_content
+
+
 def main() -> None:
+    """Main function to convert Arc browser bookmarks to HTML format."""
     data: dict = read_json()
     html: str = convert_json_to_html(data)
     write_html(html)
-
     print("Done!")
 
 
 def read_json() -> dict:
+    """Read and parse the StorableSidebar.json file with error handling."""
     print("Reading JSON...")
-
-    # Use the current working directory for the JSON file
     filename: Path = Path("StorableSidebar.json")
-    data: dict = {}
-
-    if filename.exists():
-        with filename.open("r", encoding="utf-8") as f:
-            print(f"> Found {filename} in the current directory.")
-            data = json.load(f)
-    else:
+    
+    if not filename.exists():
         print('> File not found. Look for the "StorableSidebar.json" file in the current directory.')
         raise FileNotFoundError
-
-    return data
+    
+    with filename.open("r", encoding="utf-8") as f:
+        print(f"> Found {filename} in the current directory.")
+        content = f.read()
+        # Fix malformed URLs before parsing
+        content = fix_malformed_urls(content)
+        return json.loads(content)
 
 
 def convert_json_to_html(json_data: dict) -> str:
+    """Convert Arc browser JSON data to HTML bookmark format."""
     containers: list = json_data["sidebar"]["containers"]
-    target: int = sum([1 for i in containers if "global" in i])
-
-    spaces: dict = get_spaces(json_data["sidebar"]["containers"][target]["spaces"])
-    items: list = json_data["sidebar"]["containers"][target]["items"]
-
+    
+    # Find the container with the most items (likely the main container)
+    target_container = None
+    max_items = 0
+    
+    for container in containers:
+        if "spaces" in container and "items" in container:
+            item_count = len(container["items"])
+            if item_count > max_items:
+                max_items = item_count
+                target_container = container
+    
+    if not target_container:
+        print("No container with spaces and items found!")
+        return ""
+    
+    print(f"> Using container with {max_items} items")
+    
+    spaces: dict = get_spaces(target_container["spaces"])
+    items: list = target_container["items"]
     bookmarks: dict = convert_to_bookmarks(spaces, items)
-    html_content: str = convert_bookmarks_to_html(bookmarks)
-
-    return html_content
+    
+    return convert_bookmarks_to_html(bookmarks)
 
 
 def get_spaces(spaces: list) -> dict:
+    """Extract space names and organize them by pinned/unpinned status."""
     print("Getting spaces...")
-
+    
     spaces_names: dict = {"pinned": {}, "unpinned": {}}
     spaces_count: int = 0
     n: int = 1
 
     for space in spaces:
+        # Get space title or generate default name
         if "title" in space:
             title: str = space["title"]
         else:
@@ -59,6 +95,7 @@ def get_spaces(spaces: list) -> dict:
         if isinstance(space, dict):
             containers: list = space["newContainerIDs"]
 
+            # Map container IDs to space names
             for i in range(len(containers)):
                 if isinstance(containers[i], dict):
                     if "pinned" in containers[i]:
@@ -69,11 +106,11 @@ def get_spaces(spaces: list) -> dict:
             spaces_count += 1
 
     print(f"> Found {spaces_count} spaces.")
-
     return spaces_names
 
 
 def convert_to_bookmarks(spaces: dict, items: list) -> dict:
+    """Convert Arc items to bookmark structure with proper hierarchy."""
     print("Converting to bookmarks...")
 
     bookmarks: dict = {"bookmarks": []}
@@ -81,21 +118,22 @@ def convert_to_bookmarks(spaces: dict, items: list) -> dict:
     item_dict: dict = {item["id"]: item for item in items if isinstance(item, dict)}
 
     def recurse_into_children(parent_id: str) -> list:
+        """Recursively build bookmark hierarchy from parent-child relationships."""
         nonlocal bookmarks_count
         children: list = []
+        
         for item_id, item in item_dict.items():
             if item.get("parentID") == parent_id:
                 if "data" in item and "tab" in item["data"]:
-                    children.append(
-                        {
-                            "title": item.get("title", None)
-                            or item["data"]["tab"].get("savedTitle", ""),
-                            "type": "bookmark",
-                            "url": item["data"]["tab"].get("savedURL", ""),
-                        }
-                    )
+                    # This is a bookmark
+                    children.append({
+                        "title": item.get("title", None) or item["data"]["tab"].get("savedTitle", ""),
+                        "type": "bookmark",
+                        "url": item["data"]["tab"].get("savedURL", ""),
+                    })
                     bookmarks_count += 1
                 elif "title" in item:
+                    # This is a folder
                     child_folder: dict = {
                         "title": item["title"],
                         "type": "folder",
@@ -104,6 +142,7 @@ def convert_to_bookmarks(spaces: dict, items: list) -> dict:
                     children.append(child_folder)
         return children
 
+    # Create bookmark folders for each space
     for space_id, space_name in spaces["pinned"].items():
         space_folder: dict = {
             "title": space_name,
@@ -113,11 +152,11 @@ def convert_to_bookmarks(spaces: dict, items: list) -> dict:
         bookmarks["bookmarks"].append(space_folder)
 
     print(f"> Found {bookmarks_count} bookmarks.")
-
     return bookmarks
 
 
 def convert_bookmarks_to_html(bookmarks: dict) -> str:
+    """Convert bookmark structure to Netscape bookmark HTML format."""
     print("Converting bookmarks to HTML...")
 
     html_str: str = """<!DOCTYPE NETSCAPE-Bookmark-file-1>
@@ -127,6 +166,7 @@ def convert_bookmarks_to_html(bookmarks: dict) -> str:
 <DL><p>"""
 
     def traverse_dict(d: dict, html_str: str, level: int) -> str:
+        """Recursively traverse bookmark structure and generate HTML."""
         indent: str = "\t" * level
         for item in d:
             if item["type"] == "folder":
@@ -142,13 +182,13 @@ def convert_bookmarks_to_html(bookmarks: dict) -> str:
     html_str += "\n</DL><p>"
 
     print("> HTML converted.")
-
     return html_str
 
 
 def write_html(html_content: str) -> None:
+    """Write HTML content to a timestamped file."""
     print("Writing HTML...")
-
+    
     current_date: str = datetime.datetime.now().strftime("%Y_%m_%d")
     output_file: Path = Path("arc_bookmarks_" + current_date).with_suffix(".html")
 

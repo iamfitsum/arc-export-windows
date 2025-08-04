@@ -41,10 +41,18 @@ python main.py
 
 ## How It Works
 
-1. **Read JSON**: Reads the `StorableSidebar.json` file from the current directory.
-2. **Convert Data**: Converts the JSON data into a hierarchical bookmarks dictionary.
-3. **Generate HTML**: Transforms the bookmarks dictionary into an HTML file.
-4. **Write HTML**: Saves the HTML file with a timestamp, allowing it to be imported into any web browser.
+1. **Read JSON**: Reads the `StorableSidebar.json` file and fixes any malformed escaping
+2. **Detect Container**: Automatically finds the container with the most bookmark data
+3. **Convert Data**: Converts the JSON data into a hierarchical bookmarks dictionary
+4. **Generate HTML**: Transforms the bookmarks dictionary into an HTML file
+5. **Write HTML**: Saves the HTML file with a timestamp, allowing it to be imported into any web browser
+
+## Recent Improvements
+
+- **Enhanced JSON parsing**: Handles malformed URL escaping that can occur in Arc exports
+- **Smart container detection**: Automatically finds the correct data container instead of assuming a specific structure
+- **Better error handling**: Graceful handling of various Arc export formats and structures
+- **Improved documentation**: Clear function documentation and meaningful error messages
 
 ## Acknowledgments
 
